@@ -1,0 +1,47 @@
+#在苹果的m芯片上应下载Arm 64 Compressed Archive架构的jdk，之后上云环境应制作linux-x64的镜像。否则会出现：exec: "java": executable file not found in $PATH: unknown.
+#在制作前，一定先使用jdk中的Jlink命令先生成jre
+# 基础镜像使用 debian, stable-slim 是指稳定版精简包
+#--platform的架构：linux/arm64/v8 苹果架构;linux/amd64架构
+#在苹果m芯片系列上的docker，最好创建为linux/arm64/v8架构，且使用苹果的arm架构的jdk生成jre;到生产上重新做一遍，采用Linux/amd64，并为之生成相应的jre
+#如果在苹果m芯片上只管采用linux/amd64的docker也能运行，但有警告提示.
+FROM --platform=linux/arm64/v8 debian:stable-slim
+# 描写维护者信息
+LABEL maintainer="cj <carocean.jofers@icloud.com>"
+
+#RUN来执行shell脚本，一行一行执行
+ENV TIME_ZONE Asia/Shanghai
+ENV LANG zh_CN.UTF-8 
+ENV LC_ALL zh_CN.UTF-8
+
+RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y tzdata \
+    && ln -snf /usr/share/zoneinfo/$TIME_ZONE /etc/localtime && echo $TIME_ZONE > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean \
+    && rm -rf /tmp/* /var/cache/* /usr/share/doc/* /usr/share/man/* /var/lib/apt/lists/*
+
+RUN apt-get clean && apt-get update
+RUN apt-get install -y locales
+RUN localedef -c -f UTF-8 -i zh_CN zh_CN.UTF-8
+
+# 设置工作目录
+WORKDIR /geochat
+
+# 将jdk安装包复制到 /usr/local/jdk 目录下，ADD 命令会自动解压，而COPY只是复制
+ADD jdk-17_linux-aarch64_bin.tar /usr/local/share/java/
+
+RUN /usr/local/share/java/jdk-17.0.6/bin/jlink --module-path jmods --add-modules java.security.sasl,jdk.jartool,java.se,jdk.zipfs,jdk.jdeps,jdk.jstatd,jdk.jdwp.agent,java.sql,jdk.incubator.foreign,java.smartcardio,jdk.hotspot.agent,jdk.internal.jvmstat,java.compiler,jdk.incubator.vector,java.sql.rowset,jdk.jfr,jdk.jpackage,jdk.crypto.cryptoki,jdk.internal.vm.compiler,jdk.unsupported.desktop,jdk.management,java.rmi,jdk.management.jfr,jdk.sctp,jdk.security.jgss,jdk.internal.vm.compiler.management,jdk.net,java.prefs,java.logging,jdk.xml.dom,java.base,java.xml.crypto,java.naming,jdk.internal.ed,jdk.naming.dns,java.datatransfer,jdk.unsupported,jdk.jlink,jdk.charsets,jdk.localedata,jdk.jcmd,java.desktop,jdk.accessibility,jdk.attach,java.management.rmi,java.transaction.xa,jdk.jshell,java.xml,java.management,jdk.internal.opt,jdk.httpserver,java.net.http,jdk.random,jdk.compiler,jdk.internal.le,java.instrument,jdk.dynalink,jdk.management.agent,jdk.internal.vm.ci,jdk.security.auth,java.scripting,jdk.jdi,jdk.crypto.ec,jdk.naming.rmi,jdk.jconsole,jdk.javadoc,jdk.editpad,jdk.jsobject,java.security.jgss,jdk.nio.mapmode --output /usr/local/share/java/jre-17.0.6 
+RUN rm -rf /usr/local/share/java/jdk-17.0.6
+
+
+# ENV 配置环境变量，下面就是大家熟悉的 JAVA_HOME、CLASS_PATH、PATH
+
+# ！！！！！
+# ！！！！！ 这里注意，这里写了 jdk1.8.0_201，是因为我的jdk安装包解压是叫这个名字，大家自己准备的jdk安装包解压名字不一样的，需要换掉
+
+ENV JAVA_HOME=/usr/local/share/java/jre-17.0.6
+ENV CLASSPATH=.:$JAVA_HOME/lib/jrt-fs.jar
+ENV PATH=$PATH:$JAVA_HOME/bin
+# 容器启动时需要执行的命令
+CMD ["java", "-version"]

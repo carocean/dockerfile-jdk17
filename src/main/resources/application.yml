@@ -1,0 +1,29 @@
+server:
+  port: 8761
+spring:
+  application:
+    name: cj-geochat-eureka-server
+  profiles:
+    active: ${geochat.spring.profiles.active:"prod"}
+eureka:
+  server:
+#    enable-self-preservation: true  #关闭自我保护模式（缺省为打开）生产环境需要打开
+    eviction-interval-timer-in-ms: 60000 # 续期时间，即扫描失效服务的间隔时间（缺省为60*1000ms）
+  client:
+    register-with-eureka: ${geochat.register-with-eureka:false} #设置是否将自己作为客户端注册到注册中心（缺省true,单节点设置成false，集群需要互相同步)
+    fetch-registry: ${geochat.fetch-registry:false} # 设置是否从注册中心获取注册信息（缺省true,单节点设置成false，集群需要互相同步）
+    serviceUrl:
+      #注册的地址
+#      defaultZone: http://localhost:8761/eureka/,http://localhost:8762/eureka/,http://localhost:8763/eureka/
+      defaultZone: ${geochat.EUREKA_SERVER_URL:""}
+  instance:
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}  #注册中心显示的名称IP:端口  默认 机器主机名:应用名称:应用端口
+    prefer-ip-address: true #设置微服务调用地址为IP优先（缺省为false）
+    #配置 Eureka 实例主机名，默认来自 Eureka 元数据，取自操作系统；可显式配置。在 Eureka Web 控制台的注册列表中Eureka 实例的跳转链接用。
+    hostname: ${geochat.hostname:"localhost"}
+    #eureka.instance.virtual-host-name：给 Eureka 实例指定一个虚拟主机名，通常其他实例使用虚拟主机名查找此实例(可将此虚拟主机名视为类似于完全限定的域名，供其它服务查找此实例)。见本篇的【使用 EurekaClient】章节。
+    #该虚拟主机名默认被设置为环境变量 spring.application.name 的值。当集群部署 Eureka Server 注册中心时时，多个节点的应用名必须是相同的，所以就有必要通过这个虚拟主机名来识别每一个节点实例。
+#    virtual-host-name: eureka
+    #spring.application.name和eureka.instance.appname.同时配置时，eureka.instance.appname优先级更高。
+    appname: "geochat/eureka"
+
